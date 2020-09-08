@@ -1,5 +1,3 @@
-/// <reference path="./interfaces.d.ts" />
-
 import {
   patchController,
 } from './patch-controller';
@@ -18,6 +16,7 @@ export {
 export {
   watch,
 } from './decorator-watch';
+
 // if just need static configuration
 // then can ignore watch export and call patchController() only
 export {
