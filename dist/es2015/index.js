@@ -1,0 +1,170 @@
+import { Controller, ViewResources, HtmlBehaviorResource } from 'aurelia-templating';
+import { connectable as connectable$1, Parser, ObserverLocator, createOverrideContext } from 'aurelia-binding';
+import { metadata } from 'aurelia-metadata';
+
+const connectable = connectable$1;
+class ScopeExpressionObserver {
+    constructor(scope, expression, callback, 
+    /**@internal */
+    lookupFunctions, 
+    /**@internal used by expression.connect */
+    observerLocator) {
+        this.scope = scope;
+        this.expression = expression;
+        this.callback = callback;
+        this.lookupFunctions = lookupFunctions;
+        this.observerLocator = observerLocator;
+        this.scope = scope;
+        this.lookupFunctions = lookupFunctions;
+    }
+    /**@internal */
+    call() {
+        let scope = this.scope;
+        let expression = this.expression;
+        let newValue = expression.evaluate(scope, this.lookupFunctions);
+        let oldValue = this.oldValue;
+        if (!Object.is(newValue, oldValue)) {
+            this.oldValue = newValue;
+            const obj = scope.bindingContext;
+            this.callback.call(obj, newValue, oldValue, obj);
+        }
+        this._version++;
+        expression.connect(this, scope);
+        this.unobserve(false);
+    }
+    begin() {
+        this.oldValue = this.expression.evaluate(this.scope, this.lookupFunctions);
+        this.expression.connect(this, this.scope);
+    }
+    end() {
+        this.unobserve(true);
+        this.oldValue = void 0;
+    }
+}
+// use this instead of decorator to avoid extra generated code
+connectable()(ScopeExpressionObserver);
+
+let patched = false;
+function patchController() {
+    if (patched) {
+        return;
+    }
+    patched = true;
+    ((controllerPrototype) => {
+        controllerPrototype.bind = ((bindFn) => function bind() {
+            if (!this.$obs) {
+                this.$obs = createObservers(this);
+            }
+            this.$obs.forEach(beginObserver);
+            return bindFn.apply(this, arguments);
+        })(controllerPrototype.bind);
+        controllerPrototype.unbind = ((unbindFn) => function unbind() {
+            // avoid giving the impression that it's safe to rely on watchers during unbind
+            // when everything has gotten disposed
+            // change propagation won't happen as expected, it happens on next tick after unbind
+            this.$obs.forEach(endObserver);
+            const originalReturn = unbindFn.apply(this, arguments);
+            return originalReturn;
+        })(controllerPrototype.unbind);
+    })(Controller.prototype);
+}
+const noConfiguration = [];
+function createObservers(controller) {
+    const container = controller.container;
+    const behavior = controller.behavior;
+    const viewModel = controller.viewModel;
+    const parser = container.get(Parser);
+    const lookupFunctions = container.get(ViewResources).lookupFunctions;
+    const observerLocator = container.get(ObserverLocator);
+    const Ctor = viewModel.constructor;
+    const scope = {
+        bindingContext: viewModel,
+        overrideContext: createOverrideContext(viewModel)
+    };
+    if (!behavior._$w) {
+        behavior._$w = normalizeWatchConfiguration(behavior.$watch || noConfiguration);
+    }
+    if (!Ctor._$w) {
+        Ctor._$w = normalizeWatchConfiguration(Ctor.$watch || noConfiguration);
+    }
+    return behavior
+        ._$w
+        .concat(Ctor._$w)
+        .map(watchConfiguration => {
+        const watchExpression = watchConfiguration.expression;
+        const callback = watchConfiguration.callback;
+        const callbackType = typeof callback;
+        if (!watchExpression || !callback) {
+            throw new Error(`Invalid watch config. Expression: ${watchExpression}. Callback: ${callbackType}`);
+        }
+        const expression = parser.parse(watchExpression);
+        const expressionObserver = new ScopeExpressionObserver(scope, expression, callbackType === 'function'
+            ? callback
+            : viewModel.constructor[callback], lookupFunctions, observerLocator);
+        return expressionObserver;
+    });
+}
+function beginObserver(obs) {
+    obs.begin();
+}
+function endObserver(obs) {
+    obs.end();
+}
+function normalizeWatchConfiguration(configurations) {
+    return configurations
+        .map(watchConfiguration => {
+        const expression = watchConfiguration.expression;
+        return {
+            expression: typeof expression === 'function'
+                ? getAccessorExpression(expression.toString())
+                : String(expression),
+            callback: watchConfiguration.callback,
+        };
+    });
+}
+const parseResultsCache = {};
+function getAccessorExpression(fn) {
+    const cachedResult = parseResultsCache[fn];
+    if (cachedResult !== void 0) {
+        return cachedResult;
+    }
+    /* tslint:disable:max-line-length */
+    // const classic = /^function\s*(?:[$_\w\d]?)\s*\([$_\w\d]+\)\s*\{(?:\s*"use strict";)?(?:[$_\s\w\d\/\*.['"\]+;]+)?\s*return\s+[$_\w\d]+\.([$_\w\d\.]+)\s*;?\s*\}$/;
+    const classic = /^function\s*(?:[$_\w\d]+)?\s*\([$_\w\d]+\)\s*\{(?:\s*"use strict";)?(?:[$_\s\w\d\/\*.['"\]+;]+)?\s*return\s+[$_\w\d]+\.([$_\w\d\.]+)\s*;?\s*\}$/;
+    /* tslint:enable:max-line-length */
+    const arrow = /^\(?[$_\w\d]+\)?\s*=>\s*[$_\w\d]+\.([$_\w\d\.]+)$/;
+    const match = classic.exec(fn) || arrow.exec(fn);
+    if (match === null) {
+        throw new Error(`Unable to parse accessor function:\n${fn}`);
+    }
+    return parseResultsCache[fn] = match[1];
+}
+
+function watch(expressionOrPropertyAccessFn, changeHandlerOrCallback) {
+    patchController();
+    return function decorator(target, key, descriptor) {
+        // class decorator?
+        const isClassDecorator = key == null;
+        const ctor = isClassDecorator ? target : target.constructor;
+        // basic validation
+        if (typeof changeHandlerOrCallback === 'string' && !(changeHandlerOrCallback in ctor.prototype)) {
+            throw new Error(`Invalid change handler config. Method not found in class ${ctor.name}`);
+        }
+        if (!isClassDecorator && typeof descriptor.value !== 'function') {
+            throw new Error(`decorated target ${String(key)} is not a class method.`);
+        }
+        const behaviorMetadata = metadata.getOrCreateOwn(metadata.resource, HtmlBehaviorResource, ctor);
+        const watchExpressions = behaviorMetadata.$watch = (behaviorMetadata.$watch || []);
+        watchExpressions.push({
+            expression: expressionOrPropertyAccessFn,
+            callback: isClassDecorator ? changeHandlerOrCallback : descriptor.value,
+        });
+        if (isClassDecorator) {
+            return;
+        }
+        return descriptor;
+    };
+}
+
+export { ScopeExpressionObserver, patchController, watch };
+//# sourceMappingURL=index.js.map
