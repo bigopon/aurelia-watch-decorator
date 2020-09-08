@@ -1,7 +1,7 @@
 import { metadata } from "aurelia-metadata";
 import { HtmlBehaviorResource } from "aurelia-templating";
 import { Constructable, IPropertyAccessFn, IWatcherCallback } from "./interfaces";
-import { patchController } from ".";
+import { patchController } from "./patch-controller";
 
 export function watch<T extends object = object>(
   expressionOrPropertyAccessFn: string | IPropertyAccessFn<T>,
