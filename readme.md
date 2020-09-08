@@ -184,5 +184,5 @@ class App {
 
 ### Notes
 
-- The parser for watch expression is somewhat naive, it won't be able to handle complex expression. And it's discouraged to do so, if you need to observe a complex computed expression, maybe try a getter.
+- The parser for function as watch expression is somewhat naive, it won't be able to handle complex expression. And it's discouraged to do so, if you need to observe a complex computed expression, maybe try a getter.
 - This plugin is planned to be a core part of v2. Please help file issues for ergonomic value of this plugin, so we can evaluate it for v2.
