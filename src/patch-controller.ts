@@ -4,6 +4,7 @@ import { Parser, Scope, createOverrideContext, ObserverLocator } from 'aurelia-b
 import { ScopeExpressionObserver } from './scope-expression-observer';
 
 let patched = false;
+const $O = Object;
 export function patchController() {
   if (patched) {
     return;
@@ -11,22 +12,39 @@ export function patchController() {
   patched = true;
   ((controllerPrototype) => {
     controllerPrototype.bind = ((bindFn) => function bind(this: Controller) {
-      if (!this.$obs) {
-        this.$obs = createObservers(this);
+      if (this.shouldWatch) {
+        if (!this.$obs) {
+          this.$obs = createObservers(this);
+        }
+        this.$obs.forEach(startObserver);
       }
-      this.$obs.forEach(beginObserver);
       return bindFn.apply(this, arguments);
     })(controllerPrototype.bind);
   
     controllerPrototype.unbind = ((unbindFn) => function unbind(this: Controller) {
-      // avoid giving the impression that it's safe to rely on watchers during unbind
-      // when everything has gotten disposed
-      // change propagation won't happen as expected, it happens on next tick after unbind
-      this.$obs.forEach(endObserver);
+      if (this.shouldWatch) {
+        // avoid giving the impression that it's safe to rely on watchers during unbind
+        // when everything has gotten disposed
+        // change propagation won't happen as expected, it happens on next tick after unbind
+        this.$obs.forEach(stopObserver);
+      }
       const originalReturn = unbindFn.apply(this, arguments);
       return originalReturn;
     })(controllerPrototype.unbind);
+
+    $O.defineProperty(controllerPrototype, 'shouldWatch', {
+      configurable: true,
+      get(this: Controller): boolean {
+        if (this.behavior.hasWatches) {
+          return true;
+        }
+        const Ctor = this.viewModel.constructor as Constructable & { $watch?: IWatchConfiguration[] };
+        return Ctor !== $O && Ctor.$watch != null;
+      },
+    });
   })(Controller.prototype);
+
+  HtmlBehaviorResource.prototype.hasWatches = false;
 }
 
 const noConfiguration: IWatchConfiguration[] = [];
@@ -49,7 +67,8 @@ function createObservers(controller: Controller): IScopeExpressionObserver[] {
   if (!behavior._$w) {
     behavior._$w = normalizeWatchConfiguration(behavior.$watch || noConfiguration);
   }
-  if (!Ctor._$w) {
+  // @ts-ignore
+  if (Ctor !== $O && !Ctor._$w) {
     Ctor._$w = normalizeWatchConfiguration(Ctor.$watch || noConfiguration)
   }
 
@@ -79,12 +98,12 @@ function createObservers(controller: Controller): IScopeExpressionObserver[] {
     });
 }
 
-function beginObserver(obs: IScopeExpressionObserver) {
-  obs.begin();
+function startObserver(obs: IScopeExpressionObserver) {
+  obs.start();
 }
 
-function endObserver(obs: IScopeExpressionObserver) {
-  obs.end();
+function stopObserver(obs: IScopeExpressionObserver) {
+  obs.stop();
 }
 
 function normalizeWatchConfiguration(configurations: IWatchConfiguration[]): INormalizedWatchConfiguration[] {

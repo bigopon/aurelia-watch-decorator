@@ -26,8 +26,8 @@ export interface INormalizedWatchConfiguration<T extends object = object> {
 export interface IScopeExpressionObserver<T extends object = object> {
   scope: Scope;
   callback: IWatcherCallback<T>;
-  begin(): void;
-  end(): void;
+  start(): void;
+  stop(): void;
 }
 
 /**
@@ -37,11 +37,13 @@ declare module 'aurelia-templating' {
   interface Controller {
     container: Container;
     $obs: IScopeExpressionObserver[];
+    shouldWatch: boolean;
   }
   
   interface HtmlBehaviorResource {
     _$w: INormalizedWatchConfiguration<object>[];
     $watch: IWatchConfiguration[];
+    hasWatches: boolean;
     viewFactory: ViewFactory;
   }
 
@@ -53,15 +55,3 @@ declare module 'aurelia-templating' {
     lookupFunctions: any;
   }
 }
-
-/**@internal */
-// declare module 'aurelia-binding' {
-//   export interface ExpressionObserver extends Binding, Expression {}
-//   export class ExpressionObserver implements ExpressionObserver {
-//     constructor(scope: Scope, expression: Expression, obsLocator: ObserverLocator, lookupFunctions: any);
-//     getValue(): any;
-//     setValue(value: any): void;
-//     subscribe(context, callable);
-//     unsubscribe(context, callable);
-//   }
-// }

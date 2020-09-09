@@ -33,8 +33,6 @@ export class ScopeExpressionObserver<T extends object = object> implements IScop
     /**@internal used by expression.connect */
     public observerLocator: ObserverLocator,
   ) {
-    this.scope = scope;
-    this.lookupFunctions = lookupFunctions;
   }
 
   /**@internal */
@@ -53,12 +51,12 @@ export class ScopeExpressionObserver<T extends object = object> implements IScop
     this.unobserve(false);
   }
 
-  begin() {
+  start() {
     this.oldValue = this.expression.evaluate(this.scope, this.lookupFunctions);
     this.expression.connect(this, this.scope);
   }
 
-  end() {
+  stop() {
     this.unobserve(true);
     this.oldValue = void 0;
   }

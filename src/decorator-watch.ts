@@ -38,6 +38,7 @@ export function watch<T extends object = object>(
       expression: expressionOrPropertyAccessFn,
       callback: isClassDecorator ? changeHandlerOrCallback : descriptor.value,
     });
+    behaviorMetadata.hasWatches = true;
 
     if (isClassDecorator) {
       return;
