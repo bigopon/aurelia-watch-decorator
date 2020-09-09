@@ -2,6 +2,8 @@ import './setup';
 import { bootstrapComponent } from './utils';
 import { watch } from '../src/decorator-watch';
 import { TaskQueue } from 'aurelia-framework';
+import { StageComponent } from 'aurelia-testing';
+import { bootstrap } from 'aurelia-bootstrapper';
 
 describe('@watch decorator', () => {
   describe('on method', () => {
@@ -129,7 +131,7 @@ describe('@watch decorator', () => {
             this.props.counter++;
           }
 
-          ubind() {
+          unbind() {
             const barCallCount = this.barCallCount;
             this.counter++;
             this.props.counter++;
@@ -267,7 +269,7 @@ describe('@watch decorator', () => {
             this.props.counter++;
           }
 
-          ubind() {
+          unbind() {
             const $counterCallCount = counterCallCount;
             this.counter++;
             this.props.counter++;
@@ -280,6 +282,91 @@ describe('@watch decorator', () => {
         expect(counterCallCount).toBe(1);
 
         dispose();
+      });
+
+      it(`${name} + (5.) works with "aurelia-testing"`, async () => {
+        let counterCallCount = 0;
+        @watch(fn, newValue => counterCallCount++)
+        class Abc {
+          static $view = '<template>\${barCallCount}<button click.trigger="increase()">+</button></template>';
+          static inject = [TaskQueue];
+
+          counter = 0;
+          barCallCount = 0;
+          props = {
+            counter: 10,
+          };
+
+          constructor(public taskQueue: TaskQueue) {}
+
+          bind() {
+            this.counter++;
+            this.props.counter++;
+          }
+
+          unbind() {
+            const $counterCallCount = counterCallCount;
+            this.counter++;
+            this.props.counter++;
+            this.taskQueue.flushMicroTaskQueue();
+            expect($counterCallCount).toBe(counterCallCount);
+          }
+        }
+
+        const component = StageComponent
+          .withResources(Abc as any)
+          .inView('<abc></abc>')
+          .boundTo({});
+
+        await component.create(bootstrap);
+
+        expect(counterCallCount).toBe(1);
+
+        component.dispose().remove();
+      });
+
+      it(`${name} + (6.) works with <compose/>`, async () => {
+        let counterCallCount = 0;
+        let unbindCalled = false;
+
+        @watch(fn, newValue => counterCallCount++)
+        class Abc {
+          static $view = '<template>\${barCallCount}<button click.trigger="increase()">+</button></template>';
+          static inject = [TaskQueue];
+
+          counter = 0;
+          barCallCount = 0;
+          props = {
+            counter: 10,
+          };
+
+          constructor(public taskQueue: TaskQueue) {}
+
+          bind() {
+            this.counter++;
+            this.props.counter++;
+          }
+
+          unbind() {
+            const $counterCallCount = counterCallCount;
+            this.counter++;
+            this.props.counter++;
+            this.taskQueue.flushMicroTaskQueue();
+            expect($counterCallCount).toBe(counterCallCount);
+            unbindCalled = true;
+          }
+        }
+
+        const component = StageComponent
+          .withResources(Abc as any)
+          .inView('<compose view-model.bind="Abc"></compose>')
+          .boundTo({ Abc });
+
+        await component.create(bootstrap);
+        expect(counterCallCount).toBe(1, 'counterCallCount should have been 1');
+
+        component.dispose().remove();
+        expect(unbindCalled).toBe(true);
       });
     }
   });

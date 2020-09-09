@@ -35,12 +35,6 @@ module.exports = function (config) {
         new AureliaPlugin({
           aureliaApp: undefined,
           dist: 'es2015',
-          aureliaConfig: [
-            'defaultBindingLanguage',
-            'defaultResources',
-            'developmentLogging',
-            'eventAggregator',
-          ],
           features: {
             ie: false,
             svg: false,
