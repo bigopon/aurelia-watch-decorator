@@ -48,6 +48,7 @@ export function patchController() {
 }
 
 const noConfiguration: IWatchConfiguration[] = [];
+const _$noConfiguration: INormalizedWatchConfiguration[] = [];
 function createObservers(controller: Controller): IScopeExpressionObserver[] {
   const container       = controller.container;
   const behavior        = controller.behavior;
@@ -74,7 +75,7 @@ function createObservers(controller: Controller): IScopeExpressionObserver[] {
 
   return behavior
     ._$w
-    .concat(Ctor._$w)
+    .concat(Ctor._$w || _$noConfiguration)
     .map(watchConfiguration => {
       const watchExpression = watchConfiguration.expression;
       const callback = watchConfiguration.callback;
