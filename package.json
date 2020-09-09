@@ -1,7 +1,7 @@
 {
   "name": "aurelia-watch-decorator",
   "version": "0.0.7",
-  "description": "A plugin to declare deep computed dependencies with ability to watch recursively for changes",
+  "description": "A plugin to declaratively handle observation in your custom element or custom attribute",
   "license": "MIT",
   "author": "Binh Vo <bigopon.777@gmail.com> (https://github.com/bigopon)",
   "keywords": [
@@ -24,8 +24,9 @@
     "test:watch": "karma start",
     "test:debugger": "karma start --browsers ChromeDebugging",
     "lint": "tslint -c tslint.json '{src,test}/**/*.ts' --force",
-    "precut-release": "npm run test && npm run build && git add dist",
-    "cut-release": "standard-version -t \"\" -i doc/CHANGELOG.md"
+    "cut:commit": "git add dist",
+    "precut-release": "npm run test && npm run build && npm run cut:commit",
+    "cut-release": "standard-version -t \"\" -i doc/CHANGELOG.md --commit-all"
   },
   "repository": {
     "type": "git",
@@ -64,9 +65,10 @@
     "webpack-cli": "^3.3.12"
   },
   "dependencies": {
-    "aurelia-binding": "^2.5.4",
-    "aurelia-dependency-injection": "^1.5.2",
-    "aurelia-templating": "^1.10.4"
+    "aurelia-binding": "^2.0.0",
+    "aurelia-dependency-injection": "^1.0.0",
+    "aurelia-templating": "^1.0.0",
+    "aurelia-metadata": "^1.0.0"
   },
   "files": [
     "dist",

@@ -9,6 +9,6 @@ export declare class ScopeExpressionObserver<T extends object = object> implemen
     lookupFunctions: any, 
     /**@internal used by expression.connect */
     observerLocator: ObserverLocator);
-    begin(): void;
-    end(): void;
+    start(): void;
+    stop(): void;
 }

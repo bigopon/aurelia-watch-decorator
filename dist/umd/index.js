@@ -1,7 +1,7 @@
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('aurelia-templating'), require('aurelia-binding'), require('aurelia-metadata')) :
   typeof define === 'function' && define.amd ? define(['exports', 'aurelia-templating', 'aurelia-binding', 'aurelia-metadata'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.au = global.au || {}, global.au.watchDecorator = {}), global.aureliaTemplating, global.au, global.aureliaMetadata));
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.au = global.au || {}, global.au.watchDecorator = {}), global.au, global.au, global.au));
 }(this, (function (exports, aureliaTemplating, aureliaBinding, aureliaMetadata) { 'use strict';
 
   var connectable = aureliaBinding.connectable;
@@ -16,8 +16,6 @@
           this.callback = callback;
           this.lookupFunctions = lookupFunctions;
           this.observerLocator = observerLocator;
-          this.scope = scope;
-          this.lookupFunctions = lookupFunctions;
       }
       /**@internal */
       ScopeExpressionObserver.prototype.call = function () {
@@ -34,11 +32,11 @@
           expression.connect(this, scope);
           this.unobserve(false);
       };
-      ScopeExpressionObserver.prototype.begin = function () {
+      ScopeExpressionObserver.prototype.start = function () {
           this.oldValue = this.expression.evaluate(this.scope, this.lookupFunctions);
           this.expression.connect(this, this.scope);
       };
-      ScopeExpressionObserver.prototype.end = function () {
+      ScopeExpressionObserver.prototype.stop = function () {
           this.unobserve(true);
           this.oldValue = void 0;
       };
@@ -48,6 +46,7 @@
   connectable()(ScopeExpressionObserver);
 
   var patched = false;
+  var $O = Object;
   function patchController() {
       if (patched) {
           return;
@@ -55,21 +54,36 @@
       patched = true;
       (function (controllerPrototype) {
           controllerPrototype.bind = (function (bindFn) { return function bind() {
-              if (!this.$obs) {
-                  this.$obs = createObservers(this);
+              if (this.shouldWatch) {
+                  if (!this.$obs) {
+                      this.$obs = createObservers(this);
+                  }
+                  this.$obs.forEach(startObserver);
               }
-              this.$obs.forEach(beginObserver);
               return bindFn.apply(this, arguments);
           }; })(controllerPrototype.bind);
           controllerPrototype.unbind = (function (unbindFn) { return function unbind() {
-              // avoid giving the impression that it's safe to rely on watchers during unbind
-              // when everything has gotten disposed
-              // change propagation won't happen as expected, it happens on next tick after unbind
-              this.$obs.forEach(endObserver);
+              if (this.shouldWatch) {
+                  // avoid giving the impression that it's safe to rely on watchers during unbind
+                  // when everything has gotten disposed
+                  // change propagation won't happen as expected, it happens on next tick after unbind
+                  this.$obs.forEach(stopObserver);
+              }
               var originalReturn = unbindFn.apply(this, arguments);
               return originalReturn;
           }; })(controllerPrototype.unbind);
+          $O.defineProperty(controllerPrototype, 'shouldWatch', {
+              configurable: true,
+              get: function () {
+                  if (this.behavior.hasWatches) {
+                      return true;
+                  }
+                  var Ctor = this.viewModel.constructor;
+                  return Ctor !== $O && Ctor.$watch != null;
+              },
+          });
       })(aureliaTemplating.Controller.prototype);
+      aureliaTemplating.HtmlBehaviorResource.prototype.hasWatches = false;
   }
   var noConfiguration = [];
   function createObservers(controller) {
@@ -87,7 +101,8 @@
       if (!behavior._$w) {
           behavior._$w = normalizeWatchConfiguration(behavior.$watch || noConfiguration);
       }
-      if (!Ctor._$w) {
+      // @ts-ignore
+      if (Ctor !== $O && !Ctor._$w) {
           Ctor._$w = normalizeWatchConfiguration(Ctor.$watch || noConfiguration);
       }
       return behavior
@@ -107,11 +122,11 @@
           return expressionObserver;
       });
   }
-  function beginObserver(obs) {
-      obs.begin();
+  function startObserver(obs) {
+      obs.start();
   }
-  function endObserver(obs) {
-      obs.end();
+  function stopObserver(obs) {
+      obs.stop();
   }
   function normalizeWatchConfiguration(configurations) {
       return configurations
@@ -162,6 +177,7 @@
               expression: expressionOrPropertyAccessFn,
               callback: isClassDecorator ? changeHandlerOrCallback : descriptor.value,
           });
+          behaviorMetadata.hasWatches = true;
           if (isClassDecorator) {
               return;
           }

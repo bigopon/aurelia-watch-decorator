@@ -4,12 +4,6 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### [0.0.7](https://github.com/bigopon/aurelia-watch-decorator/compare/0.0.6...0.0.7) (2020-09-09)
 
-### [0.0.7](https://github.com/bigopon/aurelia-watch-decorator/compare/0.0.5...0.0.7) (2020-09-09)
-
-* **refactor** only create observers when specified
-
-### [0.0.5](https://github.com/bigopon/aurelia-watch-decorator/compare/0.0.4...0.0.5) (2020-09-08)
-
 ### 0.0.4 (2020-09-08)
 
 ### Features

@@ -1,4 +1,4 @@
-import { Controller, ViewResources, HtmlBehaviorResource } from 'aurelia-templating';
+import { Controller, HtmlBehaviorResource, ViewResources } from 'aurelia-templating';
 import { connectable as connectable$1, Parser, ObserverLocator, createOverrideContext } from 'aurelia-binding';
 import { metadata } from 'aurelia-metadata';
 
@@ -14,8 +14,6 @@ class ScopeExpressionObserver {
         this.callback = callback;
         this.lookupFunctions = lookupFunctions;
         this.observerLocator = observerLocator;
-        this.scope = scope;
-        this.lookupFunctions = lookupFunctions;
     }
     /**@internal */
     call() {
@@ -32,11 +30,11 @@ class ScopeExpressionObserver {
         expression.connect(this, scope);
         this.unobserve(false);
     }
-    begin() {
+    start() {
         this.oldValue = this.expression.evaluate(this.scope, this.lookupFunctions);
         this.expression.connect(this, this.scope);
     }
-    end() {
+    stop() {
         this.unobserve(true);
         this.oldValue = void 0;
     }
@@ -45,6 +43,7 @@ class ScopeExpressionObserver {
 connectable()(ScopeExpressionObserver);
 
 let patched = false;
+const $O = Object;
 function patchController() {
     if (patched) {
         return;
@@ -52,21 +51,36 @@ function patchController() {
     patched = true;
     ((controllerPrototype) => {
         controllerPrototype.bind = ((bindFn) => function bind() {
-            if (!this.$obs) {
-                this.$obs = createObservers(this);
+            if (this.shouldWatch) {
+                if (!this.$obs) {
+                    this.$obs = createObservers(this);
+                }
+                this.$obs.forEach(startObserver);
             }
-            this.$obs.forEach(beginObserver);
             return bindFn.apply(this, arguments);
         })(controllerPrototype.bind);
         controllerPrototype.unbind = ((unbindFn) => function unbind() {
-            // avoid giving the impression that it's safe to rely on watchers during unbind
-            // when everything has gotten disposed
-            // change propagation won't happen as expected, it happens on next tick after unbind
-            this.$obs.forEach(endObserver);
+            if (this.shouldWatch) {
+                // avoid giving the impression that it's safe to rely on watchers during unbind
+                // when everything has gotten disposed
+                // change propagation won't happen as expected, it happens on next tick after unbind
+                this.$obs.forEach(stopObserver);
+            }
             const originalReturn = unbindFn.apply(this, arguments);
             return originalReturn;
         })(controllerPrototype.unbind);
+        $O.defineProperty(controllerPrototype, 'shouldWatch', {
+            configurable: true,
+            get() {
+                if (this.behavior.hasWatches) {
+                    return true;
+                }
+                const Ctor = this.viewModel.constructor;
+                return Ctor !== $O && Ctor.$watch != null;
+            },
+        });
     })(Controller.prototype);
+    HtmlBehaviorResource.prototype.hasWatches = false;
 }
 const noConfiguration = [];
 function createObservers(controller) {
@@ -84,7 +98,8 @@ function createObservers(controller) {
     if (!behavior._$w) {
         behavior._$w = normalizeWatchConfiguration(behavior.$watch || noConfiguration);
     }
-    if (!Ctor._$w) {
+    // @ts-ignore
+    if (Ctor !== $O && !Ctor._$w) {
         Ctor._$w = normalizeWatchConfiguration(Ctor.$watch || noConfiguration);
     }
     return behavior
@@ -104,11 +119,11 @@ function createObservers(controller) {
         return expressionObserver;
     });
 }
-function beginObserver(obs) {
-    obs.begin();
+function startObserver(obs) {
+    obs.start();
 }
-function endObserver(obs) {
-    obs.end();
+function stopObserver(obs) {
+    obs.stop();
 }
 function normalizeWatchConfiguration(configurations) {
     return configurations
@@ -159,6 +174,7 @@ function watch(expressionOrPropertyAccessFn, changeHandlerOrCallback) {
             expression: expressionOrPropertyAccessFn,
             callback: isClassDecorator ? changeHandlerOrCallback : descriptor.value,
         });
+        behaviorMetadata.hasWatches = true;
         if (isClassDecorator) {
             return;
         }

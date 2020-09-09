@@ -1,4 +1,4 @@
-import { Controller, ViewResources, HtmlBehaviorResource } from 'aurelia-templating';
+import { Controller, HtmlBehaviorResource, ViewResources } from 'aurelia-templating';
 import { connectable as connectable$1, Parser, ObserverLocator, createOverrideContext } from 'aurelia-binding';
 import { metadata } from 'aurelia-metadata';
 
@@ -14,8 +14,6 @@ var ScopeExpressionObserver = /** @class */ (function () {
         this.callback = callback;
         this.lookupFunctions = lookupFunctions;
         this.observerLocator = observerLocator;
-        this.scope = scope;
-        this.lookupFunctions = lookupFunctions;
     }
     /**@internal */
     ScopeExpressionObserver.prototype.call = function () {
@@ -32,11 +30,11 @@ var ScopeExpressionObserver = /** @class */ (function () {
         expression.connect(this, scope);
         this.unobserve(false);
     };
-    ScopeExpressionObserver.prototype.begin = function () {
+    ScopeExpressionObserver.prototype.start = function () {
         this.oldValue = this.expression.evaluate(this.scope, this.lookupFunctions);
         this.expression.connect(this, this.scope);
     };
-    ScopeExpressionObserver.prototype.end = function () {
+    ScopeExpressionObserver.prototype.stop = function () {
         this.unobserve(true);
         this.oldValue = void 0;
     };
@@ -46,6 +44,7 @@ var ScopeExpressionObserver = /** @class */ (function () {
 connectable()(ScopeExpressionObserver);
 
 var patched = false;
+var $O = Object;
 function patchController() {
     if (patched) {
         return;
@@ -53,21 +52,36 @@ function patchController() {
     patched = true;
     (function (controllerPrototype) {
         controllerPrototype.bind = (function (bindFn) { return function bind() {
-            if (!this.$obs) {
-                this.$obs = createObservers(this);
+            if (this.shouldWatch) {
+                if (!this.$obs) {
+                    this.$obs = createObservers(this);
+                }
+                this.$obs.forEach(startObserver);
             }
-            this.$obs.forEach(beginObserver);
             return bindFn.apply(this, arguments);
         }; })(controllerPrototype.bind);
         controllerPrototype.unbind = (function (unbindFn) { return function unbind() {
-            // avoid giving the impression that it's safe to rely on watchers during unbind
-            // when everything has gotten disposed
-            // change propagation won't happen as expected, it happens on next tick after unbind
-            this.$obs.forEach(endObserver);
+            if (this.shouldWatch) {
+                // avoid giving the impression that it's safe to rely on watchers during unbind
+                // when everything has gotten disposed
+                // change propagation won't happen as expected, it happens on next tick after unbind
+                this.$obs.forEach(stopObserver);
+            }
             var originalReturn = unbindFn.apply(this, arguments);
             return originalReturn;
         }; })(controllerPrototype.unbind);
+        $O.defineProperty(controllerPrototype, 'shouldWatch', {
+            configurable: true,
+            get: function () {
+                if (this.behavior.hasWatches) {
+                    return true;
+                }
+                var Ctor = this.viewModel.constructor;
+                return Ctor !== $O && Ctor.$watch != null;
+            },
+        });
     })(Controller.prototype);
+    HtmlBehaviorResource.prototype.hasWatches = false;
 }
 var noConfiguration = [];
 function createObservers(controller) {
@@ -85,7 +99,8 @@ function createObservers(controller) {
     if (!behavior._$w) {
         behavior._$w = normalizeWatchConfiguration(behavior.$watch || noConfiguration);
     }
-    if (!Ctor._$w) {
+    // @ts-ignore
+    if (Ctor !== $O && !Ctor._$w) {
         Ctor._$w = normalizeWatchConfiguration(Ctor.$watch || noConfiguration);
     }
     return behavior
@@ -105,11 +120,11 @@ function createObservers(controller) {
         return expressionObserver;
     });
 }
-function beginObserver(obs) {
-    obs.begin();
+function startObserver(obs) {
+    obs.start();
 }
-function endObserver(obs) {
-    obs.end();
+function stopObserver(obs) {
+    obs.stop();
 }
 function normalizeWatchConfiguration(configurations) {
     return configurations
@@ -160,6 +175,7 @@ function watch(expressionOrPropertyAccessFn, changeHandlerOrCallback) {
             expression: expressionOrPropertyAccessFn,
             callback: isClassDecorator ? changeHandlerOrCallback : descriptor.value,
         });
+        behaviorMetadata.hasWatches = true;
         if (isClassDecorator) {
             return;
         }
