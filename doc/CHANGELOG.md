@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.8](https://github.com/bigopon/aurelia-watch-decorator/compare/0.0.7...0.0.8) (2020-09-09)
+
+
+### Bug Fixes
+
+* **patch-controller:** ensure static API won't throw ([cc0fe71](https://github.com/bigopon/aurelia-watch-decorator/commit/cc0fe7186169b0084ec700d45a7d2991168251e2))
+
 ### [0.0.7](https://github.com/bigopon/aurelia-watch-decorator/compare/0.0.6...0.0.7) (2020-09-09)
 
 ### 0.0.4 (2020-09-08)

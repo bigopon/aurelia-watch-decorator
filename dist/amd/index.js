@@ -82,6 +82,7 @@ define('aurelia-watch-decorator', ['exports', 'aurelia-templating', 'aurelia-bin
       aureliaTemplating.HtmlBehaviorResource.prototype.hasWatches = false;
   }
   var noConfiguration = [];
+  var _$noConfiguration = [];
   function createObservers(controller) {
       var container = controller.container;
       var behavior = controller.behavior;
@@ -103,7 +104,7 @@ define('aurelia-watch-decorator', ['exports', 'aurelia-templating', 'aurelia-bin
       }
       return behavior
           ._$w
-          .concat(Ctor._$w)
+          .concat(Ctor._$w || _$noConfiguration)
           .map(function (watchConfiguration) {
           var watchExpression = watchConfiguration.expression;
           var callback = watchConfiguration.callback;
