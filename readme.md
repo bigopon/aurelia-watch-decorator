@@ -9,7 +9,7 @@ npm install aurelia-watch-decorator
 
 ### API
 
-Use `@watch` decorator on a class:
+Use `@watch` decorator on a custom element, or a custom attribute class:
 ```ts
 import { watch } from 'aurelia-watch-decorator';
 

@@ -1,6 +1,7 @@
 import './setup';
 import { bootstrapComponent } from './utils';
 import { watch } from '../src/decorator-watch';
+import { TaskQueue } from 'aurelia-framework';
 
 describe('@watch decorator', () => {
   describe('on method', () => {
@@ -109,6 +110,45 @@ describe('@watch decorator', () => {
 
         dispose();
       });
+
+      it(`${name} + (4.) dispose before unbind`, async () => {
+        class Abc {
+          static $view = '<template>\${barCallCount}<button click.trigger="increase()">+</button></template>';
+          static inject = [TaskQueue];
+
+          counter = 0;
+          barCallCount = 0;
+          props = {
+            counter: 10,
+          };
+
+          constructor(public taskQueue: TaskQueue) {}
+
+          bind() {
+            this.counter++;
+            this.props.counter++;
+          }
+
+          ubind() {
+            const barCallCount = this.barCallCount;
+            this.counter++;
+            this.props.counter++;
+            this.taskQueue.flushMicroTaskQueue();
+            expect(this.barCallCount).toBe(barCallCount);
+          }
+
+          @watch(fn)
+          bar(): void {
+            this.barCallCount++;
+          }
+          
+        }
+        const { viewModel, dispose } = await bootstrapComponent(Abc);
+        expect(viewModel.counter).toBe(1);
+        expect(viewModel.barCallCount).toBe(1);
+
+        dispose();
+      });
     }
   });
 
@@ -202,6 +242,42 @@ describe('@watch decorator', () => {
         const { viewModel, dispose } = await bootstrapComponent(Abc);
         expect(viewModel.counter).toBe(1);
         expect(counterCallCount).toBe(2);
+
+        dispose();
+      });
+
+      it(`${name} + (4.) dispose before unbind`, async () => {
+        let counterCallCount = 0;
+
+        @watch(fn, newValue => counterCallCount++)
+        class Abc {
+          static $view = '<template>\${barCallCount}<button click.trigger="increase()">+</button></template>';
+          static inject = [TaskQueue];
+
+          counter = 0;
+          barCallCount = 0;
+          props = {
+            counter: 10,
+          };
+
+          constructor(public taskQueue: TaskQueue) {}
+
+          bind() {
+            this.counter++;
+            this.props.counter++;
+          }
+
+          ubind() {
+            const $counterCallCount = counterCallCount;
+            this.counter++;
+            this.props.counter++;
+            this.taskQueue.flushMicroTaskQueue();
+            expect($counterCallCount).toBe(counterCallCount);
+          }
+        }
+        const { viewModel, dispose } = await bootstrapComponent(Abc);
+        expect(viewModel.counter).toBe(1);
+        expect(counterCallCount).toBe(1);
 
         dispose();
       });
