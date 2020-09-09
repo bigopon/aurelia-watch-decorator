@@ -7,6 +7,44 @@ import { bootstrap } from 'aurelia-bootstrapper';
 
 describe('@watch decorator', () => {
   describe('on method', () => {
+    it('does nothing when there\' no @watch', async () => {
+      class Abc implements IAbc {
+        static $view = '<template>\${barCallCount}<button click.trigger="increase()">+</button></template>';
+
+        counter = 10;
+        barCallCount = 0;
+        latestBarCallArg = undefined;
+        props = {
+          counter: 10,
+        };
+
+        bar(value: number): void {
+          this.barCallCount++;
+          this.latestBarCallArg = value;
+        }
+
+        increase() {
+          this.counter++;
+          this.props.counter++;
+        }
+      }
+
+      const { viewModel, taskQueue, host, dispose } = await bootstrapComponent(Abc);
+      expect(viewModel.counter).toBe(10);
+      expect(viewModel.barCallCount).toBe(0);
+
+      host.querySelector('button').click();
+      expect(viewModel.counter).toBe(11);
+      expect(viewModel.barCallCount).toBe(0);
+      expect(viewModel.latestBarCallArg).toBe(undefined);
+      taskQueue.flushMicroTaskQueue();
+      expect(viewModel.counter).toBe(11);
+      expect(viewModel.barCallCount).toBe(0, 'barCallCount should be 1');
+      expect(viewModel.latestBarCallArg).toBe(undefined);
+
+      dispose();
+    });
+
     for (const [name, fn] of getTestCases()) {
       it(`${name} + (1). works in basic scenario`, async () => {
         class Abc implements IAbc {
