@@ -1,6 +1,6 @@
 {
   "name": "aurelia-watch-decorator",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "A plugin to declare deep computed dependencies with ability to watch recursively for changes",
   "license": "MIT",
   "author": "Binh Vo <bigopon.777@gmail.com> (https://github.com/bigopon)",
@@ -24,8 +24,8 @@
     "test:watch": "karma start",
     "test:debugger": "karma start --browsers ChromeDebugging",
     "lint": "tslint -c tslint.json '{src,test}/**/*.ts' --force",
-    "precut-release": "npm run test",
-    "cut-release": "git add dist && standard-version -t \"\" -i doc/CHANGELOG.md"
+    "precut-release": "npm run test && npm run build && git add dist",
+    "cut-release": "standard-version -t \"\" -i doc/CHANGELOG.md"
   },
   "repository": {
     "type": "git",
