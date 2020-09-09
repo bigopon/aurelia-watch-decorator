@@ -19,6 +19,8 @@ export default ([
           'aurelia-binding': 'au',
           'aurelia-task-queue': 'au',
           'aurelia-framework': 'au',
+          'aurelia-templating': 'au',
+          'aurelia-metadata': 'au',
         }
       }
     ],
@@ -49,6 +51,8 @@ export default ([
           'aurelia-binding': 'au',
           'aurelia-task-queue': 'au',
           'aurelia-framework': 'au',
+          'aurelia-templating': 'au',
+          'aurelia-metadata': 'au',
         }
       }
     ],
