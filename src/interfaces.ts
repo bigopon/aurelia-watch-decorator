@@ -1,13 +1,13 @@
 import { Container } from 'aurelia-dependency-injection';
 import { Controller, HtmlBehaviorResource, ViewFactory, ViewResources } from 'aurelia-templating';
-import { Expression, Binding, Scope, ObserverLocator, Disposable } from 'aurelia-binding';
+import { Scope } from 'aurelia-binding';
 
 export interface ICallable {
   call(): any;
 }
 
-export type IPropertyAccessFn<T extends object> = (vm: T) => any;
-export type IWatcherCallback<T extends object> = (this: T, newValue: unknown, oldValue: unknown, vm: T) => any;
+export type IPropertyAccessFn<T extends object, R = unknown> = (vm: T) => R;
+export type IWatcherCallback<T extends object, TValue = unknown> = (this: T, newValue: TValue, oldValue: TValue, vm: T) => unknown;
 
 export interface Constructable<T extends object = object> {
   new (...args: any[]): T;
