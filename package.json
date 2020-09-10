@@ -1,6 +1,6 @@
 {
   "name": "aurelia-watch-decorator",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "A plugin to declaratively handle observation in your custom element or custom attribute",
   "license": "MIT",
   "author": "Binh Vo <bigopon.777@gmail.com> (https://github.com/bigopon)",
