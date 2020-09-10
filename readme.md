@@ -26,6 +26,9 @@ class Abc {
 }
 ```
 
+- The decorator can be used on Custom element or Custom attribute only
+- The watchers are created once, and started before `bind`, stopped before `unbind` lifecycle of custom elements/custom attributes.
+
 #### Watch parameters
 ```ts
 // on class
