@@ -28,6 +28,38 @@ class Abc {
 
 - The decorator can be used on Custom element or Custom attribute only
 - The watchers are created once, and started before `bind`, stopped before `unbind` lifecycle of custom elements/custom attributes.
+  - mutation during bind will be reacted to:
+  ```ts
+  class MyEl {
+    counter = 0;
+
+    bind() {
+      // this will trigger log() call
+      this.counter++;
+    }
+
+    @watch(el => el.counter)
+    log(newCounterValue) {
+      console.log(newCounterValue);
+    }
+  }
+  ```
+  - mutation during unbind won't be reacted to:
+  ```ts
+  class MyEl {
+    counter = 0;
+
+    unbind() {
+      // this will not be reacted to
+      this.counter++;
+    }
+
+    @watch(el => el.counter)
+    log(newCounterValue) {
+      console.log(newCounterValue);
+    }
+  }
+  ```
 
 #### Watch parameters
 ```ts
