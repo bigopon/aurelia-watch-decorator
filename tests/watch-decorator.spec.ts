@@ -95,6 +95,8 @@ describe('@watch decorator', () => {
             counter: 10,
           };
 
+          // @ts-ignore method decorator only accepts 1 argument
+          // 2nd argument does not compiles, but it's good for assertion
           @watch(fn, () => { throw new Error('invalid') })
           bar(): void {
             this.barCallCount++;
@@ -448,7 +450,7 @@ describe('@watch decorator', () => {
 interface IAbc {
   counter: number;
   barCallCount: number;
-  latestBarCallArg: any;
+  latestBarCallArg?: any;
   props: {
     counter: number;
   };
